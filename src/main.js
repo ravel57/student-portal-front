@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { Quasar } from 'quasar'
 import quasarLang from 'quasar/lang/ru'
+import router from './router'
 
 import '@quasar/extras/material-icons/material-icons.css'
 
@@ -15,4 +16,5 @@ myApp.use(Quasar, {
     lang: quasarLang,
 })
 
+myApp.use(router)
 myApp.mount('#app')

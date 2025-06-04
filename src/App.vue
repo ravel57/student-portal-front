@@ -1,15 +1,13 @@
-<script setup>
-import LoginForm from './components/login/LoginForm.vue'
-</script>
-
 <template>
-  <div class="q-pa-md">
-    <LoginForm />
-  </div>
+  <router-view />
 </template>
 
+<script setup>
+</script>
+
 <style>
-.q-pa-md {
-  padding: 16px;
+body {
+  margin: 0;
+  padding: 0;
 }
 </style>
