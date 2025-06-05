@@ -83,6 +83,7 @@ import axios from 'axios';
 
 export default {
 	name: "DashboardPage",
+
 	data: () => ({
 		role: "TEACHER",
 		groups: [],
@@ -94,6 +95,7 @@ export default {
 		selectedSubject: "",
 		selectedGroup: ""
 	}),
+
 	computed: {
 		tableRows() {
 			return this.studentsMarks;
@@ -133,6 +135,7 @@ export default {
 			return this.role === "TEACHER" ? "student.id" : "subject.id";
 		}
 	},
+
 	methods: {
 		logout() {
 			window.location.href = "/login";
@@ -189,10 +192,7 @@ export default {
 			console.log(this.groups.find(group => {
 				return group.id === this.selectedGroup
 			}))
-			axios.post("/api/v1/students",
-				this.groups.find(group => {
-					return group.id === this.selectedGroup
-				})
+			axios.post("/api/v1/students", {id: this.groups.find(group => group.id === this.selectedGroup).id}
 			).then(res => {
 				const students = res.data;
 				const flattened = [];
@@ -210,8 +210,6 @@ export default {
 				this.studentsMarks = flattened;
 				this.initializeDatesAndLocalMarks();
 			});
-
-			axios.get("/api/v1/groups").then(res => this.groups = res.data);
 		},
 		initializeDatesAndLocalMarks() {
 			const dateSet = new Set();
@@ -224,14 +222,16 @@ export default {
 			});
 		}
 	},
+
 	watch: {
 		selectedGroup() {
 			this.fetchData()
 		}
 	},
+
 	mounted() {
-		this.fetchSubjects();
 		axios.get("/api/v1/groups").then(res => this.groups = res.data);
+		this.fetchSubjects();
 	}
 };
 </script>
