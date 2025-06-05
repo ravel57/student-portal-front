@@ -101,12 +101,14 @@ export default {
 	name: "DashboardPage",
 
 	data: () => ({
-		role: "TEACHER", // или "STUDENT"
+		role: "TEACHER", //	ADMIN TEACHER STUDENT
+		groups: [],
+		students: [],
 		studentsMarks: [],
 		localMarks: [],
 		appliedGrades: {},
 		dates: [],
-		subjects: [] // Добавляем массив для хранения предметов
+		subjects: []
 	}),
 
 	computed: {
