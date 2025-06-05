@@ -393,6 +393,14 @@ export default {
 					.catch(e => {
 						console.log('fetchData error:', e);
 					});
+
+				axios.get("/api/v1/groups")
+					.then(response => {
+						this.groups = response.data;
+					})
+					.catch(e => {
+						console.log(e)
+					})
 			} else if (this.role === "STUDENT") {
 				axios
 					.get("/api/v1/students-marks")
