@@ -118,90 +118,90 @@ export default {
 	}),
 
 	computed: {
-		// tableRows() {
-		// 	const flattened = []
-		// 	this.students.forEach(student => {
-		// 		this.subjects
-		// 			.filter(subject => subject.id === this.selectedSubject)
-		// 			.forEach(subject => {
-		// 				const existingMarks = Array.isArray(student.studentsMarks) ? student.studentsMarks : []
-		// 				const match = existingMarks.find(sm => sm.subject?.id === subject.id)
-		// 				flattened.push({
-		// 					student: {
-		// 						id: student.id,
-		// 						firstname: student.firstname,
-		// 						lastname: student.lastname
-		// 					},
-		// 					subject,
-		// 					marks: match?.marks || []
-		// 				})
-		// 			})
-		// 	})
-		// 	this.studentsMarks = flattened
-		// 	const dateSet = new Set()
-		// 	this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)))
-		// 	// this.dates = Array.from(dateSet).sort()
-		// 	this.localMarks = this.studentsMarks.map(row => {
-		// 		const dict = {}
-		// 		row.marks.forEach(m => dict[m.date] = m.mark)
-		// 		return dict
-		// 	})
-		// 	return this.studentsMarks
-		// },
-		// columns() {
-		// 	const dateCols = this.dates.map(dateStr => {
-		// 		const [year, month, day] = dateStr.split("-")
-		// 		return {
-		// 			name: dateStr,
-		// 			label: `${day}.${month}.${year}`,
-		// 			align: "center",
-		// 			field: dateStr,
-		// 			sortable: false,
-		// 			style: "width: 80px"
-		// 		}
-		// 	})
-		// 	console.log(dateCols)
-		// 	const baseCol = this.role === "TEACHER"
-		// 		? {
-		// 			name: "student",
-		// 			label: "Студент",
-		// 			align: "left",
-		// 			field: row => `${row.student.firstname} ${row.student.lastname}`,
-		// 			required: true,
-		// 			style: "min-width: 200px"
-		// 		}
-		// 		: {
-		// 			name: "subject",
-		// 			label: "Предмет",
-		// 			align: "left",
-		// 			field: row => row.subject?.name || '',
-		// 			required: true,
-		// 			style: "min-width: 200px"
-		// 		}
-		// 	console.log(baseCol)
-		// 	return [baseCol, ...dateCols]
-		// },
-		columns() {
-			return [
-				{
-					name: 'student',
-					label: 'Студент',
-					field: row => row.student.fullName || row.student.lastname
-				},
-				...this.allDates.map(date => ({
-					name: date,
-					label: date,
-					field: row => row.marksByDate[date] || '',
-					align: 'center'
-				}))
-			];
-		},
 		tableRows() {
-			return this.studentsMarks.map(sm => ({
-				student: sm.student,
-				marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
-			}));
+			const flattened = []
+			this.students.forEach(student => {
+				this.subjects
+					.filter(subject => subject.id === this.selectedSubject)
+					.forEach(subject => {
+						const existingMarks = Array.isArray(student.studentsMarks) ? student.studentsMarks : []
+						const match = existingMarks.find(sm => sm.subject?.id === subject.id)
+						flattened.push({
+							student: {
+								id: student.id,
+								firstname: student.firstname,
+								lastname: student.lastname
+							},
+							subject,
+							marks: match?.marks || []
+						})
+					})
+			})
+			this.studentsMarks = flattened
+			const dateSet = new Set()
+			this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)))
+			// this.dates = Array.from(dateSet).sort()
+			this.localMarks = this.studentsMarks.map(row => {
+				const dict = {}
+				row.marks.forEach(m => dict[m.date] = m.mark)
+				return dict
+			})
+			return this.studentsMarks
 		},
+		columns() {
+			const dateCols = this.dates.map(dateStr => {
+				const [year, month, day] = dateStr.split("-")
+				return {
+					name: dateStr,
+					label: `${day}.${month}.${year}`,
+					align: "center",
+					field: dateStr,
+					sortable: false,
+					style: "width: 80px"
+				}
+			})
+			console.log(dateCols)
+			const baseCol = this.role === "TEACHER"
+				? {
+					name: "student",
+					label: "Студент",
+					align: "left",
+					field: row => `${row.student.firstname} ${row.student.lastname}`,
+					required: true,
+					style: "min-width: 200px"
+				}
+				: {
+					name: "subject",
+					label: "Предмет",
+					align: "left",
+					field: row => row.subject?.name || '',
+					required: true,
+					style: "min-width: 200px"
+				}
+			console.log(baseCol)
+			return [baseCol, ...dateCols]
+		},
+		// columns() {
+		// 	return [
+		// 		{
+		// 			name: 'student',
+		// 			label: 'Студент',
+		// 			field: row => row.student.fullName || row.student.lastname
+		// 		},
+		// 		...this.allDates.map(date => ({
+		// 			name: date,
+		// 			label: date,
+		// 			field: row => row.marksByDate[date] || '',
+		// 			align: 'center'
+		// 		}))
+		// 	];
+		// },
+		// tableRows() {
+		// 	return this.studentsMarks.map(sm => ({
+		// 		student: sm.student,
+		// 		marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
+		// 	}));
+		// },
 		rowKey() {
 			return this.role === "TEACHER" ? "student.id" : "subject.id"
 		},
