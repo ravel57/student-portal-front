@@ -66,13 +66,13 @@
 						>
 							<template v-slot:body="props">
 								<q-tr>
-									<q-td v-if="isTeacher">
+									<q-td v-if="this.role === 'TEACHER'">
 										{{ renderStudentName(props.row.student) }}
 									</q-td>
 									<q-td v-else>
 										{{ props.row.subject.name }}
 									</q-td>
-									<template v-if="isTeacher">
+									<template v-if="this.role === 'TEACHER'">
 										<q-td v-for="subject in subjects" :key="subject.id" class="text-center">
 											<div v-for="date in dates" :key="date" class="q-mb-xs">
 												<q-input
@@ -119,7 +119,7 @@ export default {
 	name: "DashboardPage",
 
 	data: () => ({
-		role: "STUDENT",
+		role: null,
 		groups: [],
 		students: [],
 		student: null,
@@ -177,7 +177,7 @@ export default {
 			return rows;
 		},
 		columns() {
-			if (this.isTeacher) {
+			if (this.role === 'TEACHER') {
 				return [
 					{
 						name: 'student',
@@ -227,7 +227,12 @@ export default {
 
 	methods: {
 		logout() {
-			window.location.href = "/login"
+			axios.post('/logout')
+				.then(() => location.reload())
+				.catch(() => {
+					axios.post('/logout')
+						.then(() => location.reload())
+				})
 		},
 		renderStudentName(student) {
 			return `${student.firstname} ${student.lastname}`
@@ -280,9 +285,6 @@ export default {
 					this.students = response.data
 				})
 		},
-		isTeacher() {
-			return this.role === 'TEACHER'
-		},
 		formatDate(dateStr) {
 			if (!dateStr) return ''
 			const [year, month, day] = dateStr.split('-')
@@ -297,18 +299,19 @@ export default {
 	},
 
 	mounted() {
-		axios.get("/api/v1/groups")
+		axios.get("/api/v1/me")
 			.then(response => {
-				this.groups = response.data
+				this.role = response.data.role
+				if (this.role === 'TEACHER' || this.role === 'ADMIN') {
+					axios.get("/api/v1/groups")
+						.then(response => {
+							this.groups = response.data
+						})
+				} else if (this.role === 'STUDENT') {
+					this.students = response.data
+				}
+				this.fetchSubjects()
 			})
-		this.fetchSubjects()
-		if (!this.isTeacher) {
-			axios.get("/api/v1/me")
-				.then(response => {
-					console.log(response.data)
-					this.student = response.data
-				})
-		}
 	},
 }
 </script>
