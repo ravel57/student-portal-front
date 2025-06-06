@@ -48,7 +48,14 @@
 								style="min-width: 120px"
 							/>
 						</div>
-						<q-table :rows="tableRows" :columns="columns" :row-key="rowKey" flat bordered hide-bottom>
+						<q-table
+							:rows="tableRows"
+							:columns="columns"
+							:row-key="rowKey"
+							flat
+							bordered
+							hide-bottom
+						>
 							<template v-slot:body="props">
 								<q-tr>
 									<q-td>{{ renderStudentName(props.row.student) }}</q-td>
@@ -61,11 +68,24 @@
 												max="5"
 												class="grade-input"
 												@blur="onGradeChange(props.rowIndex, date)"
-												@keyup.enter="onGradeEnter(props.rowIndex, date)"
+												@keyup.enter="updateStudentMark(props.rowIndex, date)"
 												dense
 											/>
-											<q-icon v-if="isGradeApplied(props.rowIndex, date)" name="check"
-													color="positive" size="20px" class="q-ml-xs"/>
+											<q-td v-for="date in dates" :key="date">
+												<q-input
+													v-model.number="props.row.marks[date]"
+													type="number"
+													min="2"
+													max="5"
+													dense
+												/>
+											</q-td>
+											<q-icon
+												name="check"
+												color="positive"
+												size="20px"
+												class="q-ml-xs"
+											/>
 										</div>
 									</q-td>
 								</q-tr>
@@ -79,7 +99,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from 'axios'
 
 export default {
 	name: "DashboardPage",
@@ -87,153 +107,220 @@ export default {
 	data: () => ({
 		role: "TEACHER",
 		groups: [],
+		students: [],
 		studentsMarks: [],
 		localMarks: [],
 		appliedGrades: {},
 		dates: [],
 		subjects: [],
 		selectedSubject: "",
-		selectedGroup: ""
+		selectedGroup: null
 	}),
 
 	computed: {
-		tableRows() {
-			return this.studentsMarks;
-		},
+		// tableRows() {
+		// 	const flattened = []
+		// 	this.students.forEach(student => {
+		// 		this.subjects
+		// 			.filter(subject => subject.id === this.selectedSubject)
+		// 			.forEach(subject => {
+		// 				const existingMarks = Array.isArray(student.studentsMarks) ? student.studentsMarks : []
+		// 				const match = existingMarks.find(sm => sm.subject?.id === subject.id)
+		// 				flattened.push({
+		// 					student: {
+		// 						id: student.id,
+		// 						firstname: student.firstname,
+		// 						lastname: student.lastname
+		// 					},
+		// 					subject,
+		// 					marks: match?.marks || []
+		// 				})
+		// 			})
+		// 	})
+		// 	this.studentsMarks = flattened
+		// 	const dateSet = new Set()
+		// 	this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)))
+		// 	// this.dates = Array.from(dateSet).sort()
+		// 	this.localMarks = this.studentsMarks.map(row => {
+		// 		const dict = {}
+		// 		row.marks.forEach(m => dict[m.date] = m.mark)
+		// 		return dict
+		// 	})
+		// 	return this.studentsMarks
+		// },
+		// columns() {
+		// 	const dateCols = this.dates.map(dateStr => {
+		// 		const [year, month, day] = dateStr.split("-")
+		// 		return {
+		// 			name: dateStr,
+		// 			label: `${day}.${month}.${year}`,
+		// 			align: "center",
+		// 			field: dateStr,
+		// 			sortable: false,
+		// 			style: "width: 80px"
+		// 		}
+		// 	})
+		// 	console.log(dateCols)
+		// 	const baseCol = this.role === "TEACHER"
+		// 		? {
+		// 			name: "student",
+		// 			label: "Студент",
+		// 			align: "left",
+		// 			field: row => `${row.student.firstname} ${row.student.lastname}`,
+		// 			required: true,
+		// 			style: "min-width: 200px"
+		// 		}
+		// 		: {
+		// 			name: "subject",
+		// 			label: "Предмет",
+		// 			align: "left",
+		// 			field: row => row.subject?.name || '',
+		// 			required: true,
+		// 			style: "min-width: 200px"
+		// 		}
+		// 	console.log(baseCol)
+		// 	return [baseCol, ...dateCols]
+		// },
 		columns() {
-			const dateCols = this.dates.map(dateStr => {
-				const [year, month, day] = dateStr.split("-");
-				return {
-					name: dateStr,
-					label: `${day}.${month}`,
-					align: "center",
-					field: dateStr,
-					sortable: false,
-					style: "width: 80px"
-				};
-			});
-			const baseCol = this.role === "TEACHER"
-				? {
-					name: "student",
-					label: "Студент",
-					align: "left",
-					field: row => `${row.student.firstname} ${row.student.lastname}`,
-					required: true,
-					style: "min-width: 200px"
-				}
-				: {
-					name: "subject",
-					label: "Предмет",
-					align: "left",
-					field: row => row.subject?.name || '',
-					required: true,
-					style: "min-width: 200px"
-				};
-			return [baseCol, ...dateCols];
+			return [
+				{
+					name: 'student',
+					label: 'Студент',
+					field: row => row.student.fullName || row.student.lastname
+				},
+				...this.allDates.map(date => ({
+					name: date,
+					label: date,
+					field: row => row.marksByDate[date] || '',
+					align: 'center'
+				}))
+			];
+		},
+		tableRows() {
+			return this.studentsMarks.map(sm => ({
+				student: sm.student,
+				marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
+			}));
 		},
 		rowKey() {
-			return this.role === "TEACHER" ? "student.id" : "subject.id";
-		}
+			return this.role === "TEACHER" ? "student.id" : "subject.id"
+		},
+		allDates() {
+			return Array.from(
+				new Set(
+					this.studentsMarks.flatMap(sm => sm.marks.map(m => m.date))
+				)
+			).sort();
+		},
 	},
 
 	methods: {
 		logout() {
-			window.location.href = "/login";
+			window.location.href = "/login"
 		},
 		renderStudentName(student) {
-			return `${student.firstname} ${student.lastname}`;
+			return `${student.firstname} ${student.lastname}`
 		},
 		addNewDate() {
-			const dateStr = new Date().toISOString().split('T')[0];
+			const dateStr = new Date().toISOString().split('T')[0]
 			if (!this.dates.includes(dateStr)) {
-				this.dates.push(dateStr);
-				this.dates.sort();
+				this.dates.push(dateStr)
+				this.dates.sort()
 				this.studentsMarks.forEach((row, i) => {
-					this.localMarks[i] = this.localMarks[i] || {};
-					this.localMarks[i][dateStr] = 0;
-				});
+					this.localMarks[i] = this.localMarks[i] || {}
+					this.localMarks[i][dateStr] = 0
+				})
 			}
 		},
 		onGradeChange(rowIndex, date) {
-			const key = `${rowIndex}_${date}`;
-			this.appliedGrades[key] = true;
-			setTimeout(() => delete this.appliedGrades[key], 2000);
+			console.log(date);
+			const key = `${rowIndex}_${date}`
+			this.appliedGrades[key] = true
+			setTimeout(() => delete this.appliedGrades[key], 2000)
 		},
-		onGradeEnter(rowIndex, date) {
-			const row = this.studentsMarks[rowIndex];
-			const studentId = row.student.id;
-			const subjectId = row.subject?.id;
-			const markValue = this.localMarks[rowIndex]?.[date] ?? 0;
-			if (!subjectId) return;
-
-			axios.post("/api/v1/update-mark", {
-				student: `${row.student.firstname} ${row.student.lastname}`,
-				date,
+		updateStudentMark(rowIndex, date) {
+			console.log(rowIndex)
+			const row = this.studentsMarks[rowIndex]
+			const subjectId = row.subject?.id
+			const markValue = this.localMarks[rowIndex]?.[date] ?? 0
+			if (!subjectId) return
+			const requestBody = {
+				date: date,
 				mark: markValue,
-				subject: row.subject.name,
-				studentId
-			}).then(() => {
-				const existing = row.marks.find(m => m.date === date);
-				if (existing) existing.mark = markValue;
-				else row.marks.push({date, mark: markValue});
-				if (!this.dates.includes(date)) this.dates.push(date);
-				this.onGradeChange(rowIndex, date);
-			});
+				subjectId: row.subject.id,
+				studentId: row.student.id
+			};
+			console.log(requestBody)
+			axios.post("/api/v1/update-mark", requestBody).then(() => {
+				const existing = row.marks.find(m => m.date === date)
+				if (existing) existing.mark = markValue
+				else row.marks.push({date, mark: markValue})
+				if (!this.dates.includes(date)) {
+					this.dates.push(date)
+				}
+				this.onGradeChange(rowIndex, date)
+			})
 		},
-		isGradeApplied(rowIndex, date) {
-			return !!this.appliedGrades[`${rowIndex}_${date}`];
-		},
+		// isGradeApplied(rowIndex, date) {
+		// console.log(date);
+		// 	return !!this.appliedGrades[`${rowIndex}_${date}`]
+		// },
 		fetchSubjects() {
-			axios.get("/api/v1/subjects").then(res => this.subjects = res.data);
+			axios.get("/api/v1/subjects")
+				.then(res => this.subjects = res.data)
 		},
-		fetchData() {
+		fetchStudents() {
 			console.log(this.selectedGroup)
-			console.log(this.groups)
-			console.log(this.groups.find(group => {
-				return group.id === this.selectedGroup
-			}))
-			axios.post("/api/v1/students", {id: this.groups.find(group => group.id === this.selectedGroup).id}
-			).then(res => {
-				const students = res.data;
-				const flattened = [];
-				students.forEach(student => {
-					this.subjects.forEach(subject => {
-						const existingMarks = Array.isArray(student.studentsMarks) ? student.studentsMarks : [];
-						const match = existingMarks.find(sm => sm.subject?.id === subject.id);
-						flattened.push({
-							student: {id: student.id, firstname: student.firstname, lastname: student.lastname},
-							subject,
-							marks: match?.marks || []
-						});
-					});
-				});
-				this.studentsMarks = flattened;
-				this.initializeDatesAndLocalMarks();
-			});
+			axios.post("/api/v1/students", {id: this.selectedGroup})
+				.then(response => {
+					this.students = response.data
+					this.fetchMarks()
+				})
 		},
-		initializeDatesAndLocalMarks() {
-			const dateSet = new Set();
-			this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)));
-			this.dates = Array.from(dateSet).sort();
-			this.localMarks = this.studentsMarks.map(row => {
-				const dict = {};
-				row.marks.forEach(m => dict[m.date] = m.mark);
-				return dict;
-			});
+		fetchMarks() {
+			axios.get('/api/v1/students-marks', {params: {groupId: this.selectedGroup}})
+				.then(response => {
+					this.studentsMarks = response.data;
+					// const allDates = Array.from(new Set(
+					// 	this.studentsMarks.flatMap(sm => sm.marks.map(m => m.date))
+					// )).sort();
+					// this.columns = [
+					// 	{
+					// 		name: 'student',
+					// 		label: 'Студент',
+					// 		field: row => row.student.fullName || row.student.lastname
+					// 	},
+					// 	...allDates.map(date => ({
+					// 		name: date,
+					// 		label: date,
+					// 		field: row => row.marksByDate[date] || '',
+					// 		align: 'center'
+					// 	}))
+					// ]
+					// this.tableRows = this.studentsMarks.map(sm => ({
+					// 	student: sm.student,
+					// 	marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
+					// }))
+				})
 		}
 	},
 
 	watch: {
 		selectedGroup() {
-			this.fetchData()
+			this.fetchStudents()
 		}
 	},
 
 	mounted() {
-		axios.get("/api/v1/groups").then(res => this.groups = res.data);
-		this.fetchSubjects();
+		console.log(this.dates)
+		this.dates = Array.from(new Set(
+			this.studentsMarks.flatMap(student => Object.keys(student.marks))
+		)).sort();
+		axios.get("/api/v1/groups")
+			.then(response => this.groups = response.data)
+		this.fetchSubjects()
 	}
-};
+}
 </script>
 
 <style scoped>
