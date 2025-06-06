@@ -61,31 +61,21 @@
 									<q-td>{{ renderStudentName(props.row.student) }}</q-td>
 									<q-td>
 										<div class="q-pa-xs flex justify-center items-center">
-											<q-input
-												v-model.number="localMarks[props.rowIndex][date]"
-												type="number"
-												min="2"
-												max="5"
-												class="grade-input"
-												@blur="onGradeChange(props.rowIndex, date)"
-												@keyup.enter="updateStudentMark(props.rowIndex, date)"
-												dense
-											/>
-											<q-td v-for="date in dates" :key="date">
+											<q-td
+												v-for="date in this.dates"
+												:key="date"
+											>
 												<q-input
-													v-model.number="props.row.marks[date]"
+													v-model.number="localMarks[props.rowIndex]"
 													type="number"
 													min="2"
 													max="5"
+													class="grade-input"
+													@blur="onGradeChange(props.rowIndex)"
+													@keyup.enter="updateStudentMark(props.rowIndex)"
 													dense
 												/>
 											</q-td>
-											<q-icon
-												name="check"
-												color="positive"
-												size="20px"
-												class="q-ml-xs"
-											/>
 										</div>
 									</q-td>
 								</q-tr>
@@ -140,7 +130,8 @@ export default {
 			this.studentsMarks = flattened
 			const dateSet = new Set()
 			this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)))
-			// this.dates = Array.from(dateSet).sort()
+			this.dates = Array.from(dateSet).sort()
+			console.log(this.dates)
 			this.localMarks = this.studentsMarks.map(row => {
 				const dict = {}
 				row.marks.forEach(m => dict[m.date] = m.mark)
@@ -160,7 +151,6 @@ export default {
 					style: "width: 80px"
 				}
 			})
-			console.log(dateCols)
 			const baseCol = this.role === "TEACHER"
 				? {
 					name: "student",
@@ -178,39 +168,10 @@ export default {
 					required: true,
 					style: "min-width: 200px"
 				}
-			console.log(baseCol)
 			return [baseCol, ...dateCols]
 		},
-		// columns() {
-		// 	return [
-		// 		{
-		// 			name: 'student',
-		// 			label: 'Студент',
-		// 			field: row => row.student.fullName || row.student.lastname
-		// 		},
-		// 		...this.allDates.map(date => ({
-		// 			name: date,
-		// 			label: date,
-		// 			field: row => row.marksByDate[date] || '',
-		// 			align: 'center'
-		// 		}))
-		// 	];
-		// },
-		// tableRows() {
-		// 	return this.studentsMarks.map(sm => ({
-		// 		student: sm.student,
-		// 		marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
-		// 	}));
-		// },
 		rowKey() {
 			return this.role === "TEACHER" ? "student.id" : "subject.id"
-		},
-		allDates() {
-			return Array.from(
-				new Set(
-					this.studentsMarks.flatMap(sm => sm.marks.map(m => m.date))
-				)
-			).sort();
 		},
 	},
 
@@ -222,24 +183,25 @@ export default {
 			return `${student.firstname} ${student.lastname}`
 		},
 		addNewDate() {
-			const dateStr = new Date().toISOString().split('T')[0]
+			const [year, month, day] = new Date().toISOString().split('T')[0].split("-")
+			const dateStr = `${day}.${month}.${year}`
 			if (!this.dates.includes(dateStr)) {
 				this.dates.push(dateStr)
-				this.dates.sort()
+				// this.dates.sort()
 				this.studentsMarks.forEach((row, i) => {
 					this.localMarks[i] = this.localMarks[i] || {}
 					this.localMarks[i][dateStr] = 0
 				})
 			}
 		},
-		onGradeChange(rowIndex, date) {
-			console.log(date);
+		onGradeChange(rowIndex) {
+			let date = this.dates[rowIndex]
 			const key = `${rowIndex}_${date}`
 			this.appliedGrades[key] = true
 			setTimeout(() => delete this.appliedGrades[key], 2000)
 		},
-		updateStudentMark(rowIndex, date) {
-			console.log(rowIndex)
+		updateStudentMark(rowIndex) {
+			let date = this.dates[rowIndex]
 			const row = this.studentsMarks[rowIndex]
 			const subjectId = row.subject?.id
 			const markValue = this.localMarks[rowIndex]?.[date] ?? 0
@@ -249,20 +211,19 @@ export default {
 				mark: markValue,
 				subjectId: row.subject.id,
 				studentId: row.student.id
-			};
-			console.log(requestBody)
-			axios.post("/api/v1/update-mark", requestBody).then(() => {
-				const existing = row.marks.find(m => m.date === date)
-				if (existing) existing.mark = markValue
-				else row.marks.push({date, mark: markValue})
-				if (!this.dates.includes(date)) {
-					this.dates.push(date)
-				}
-				this.onGradeChange(rowIndex, date)
-			})
+			}
+			axios.post("/api/v1/update-mark", requestBody)
+				.then(() => {
+					const existing = row.marks.find(m => m.date === date)
+					if (existing) existing.mark = markValue
+					else row.marks.push({date, mark: markValue})
+					if (!this.dates.includes(date)) {
+						this.dates.push(date)
+					}
+					this.onGradeChange(rowIndex, date)
+				})
 		},
 		// isGradeApplied(rowIndex, date) {
-		// console.log(date);
 		// 	return !!this.appliedGrades[`${rowIndex}_${date}`]
 		// },
 		fetchSubjects() {
@@ -270,7 +231,6 @@ export default {
 				.then(res => this.subjects = res.data)
 		},
 		fetchStudents() {
-			console.log(this.selectedGroup)
 			axios.post("/api/v1/students", {id: this.selectedGroup})
 				.then(response => {
 					this.students = response.data
@@ -312,12 +272,13 @@ export default {
 	},
 
 	mounted() {
-		console.log(this.dates)
-		this.dates = Array.from(new Set(
-			this.studentsMarks.flatMap(student => Object.keys(student.marks))
-		)).sort();
+		// this.dates = Array.from(new Set(
+		// 	this.studentsMarks.flatMap(student => Object.keys(student.marks))
+		// )).sort();
 		axios.get("/api/v1/groups")
-			.then(response => this.groups = response.data)
+			.then(response => {
+				this.groups = response.data
+			})
 		this.fetchSubjects()
 	}
 }
