@@ -13,9 +13,9 @@
 				<q-card>
 					<q-card-section>
 						<div class="text-h6 q-mb-md flex items-center">
-							{{ role === 'TEACHER' ? 'Оценки студентов' : 'Ваши оценки по предметам' }}
+							{{ title }}
 							<q-btn
-								v-if="role === 'TEACHER'"
+								v-if="role === 'ADMIN'"
 								flat
 								color="primary"
 								icon="add"
@@ -25,7 +25,11 @@
 							/>
 						</div>
 						<div class="table-param">
-							<div class="table-param-text">Группа</div>
+							<div
+								v-if="role === 'TEACHER'"
+								class="table-param-text"
+								v-text="'Группа'"
+							/>
 							<q-select
 								v-if="role === 'TEACHER'"
 								:options="groups"
@@ -35,7 +39,11 @@
 								v-model="selectedGroup"
 								dense style="min-width: 120px"
 							/>
-							<div class="table-param-text">Предмет</div>
+							<div
+								v-if="role === 'TEACHER'"
+								class="table-param-text"
+								v-text="'Предмет'"
+							/>
 							<q-select
 								v-if="role === 'TEACHER'"
 								:options="subjects"
@@ -58,26 +66,42 @@
 						>
 							<template v-slot:body="props">
 								<q-tr>
-									<q-td>{{ renderStudentName(props.row.student) }}</q-td>
-									<q-td>
-										<div class="q-pa-xs flex justify-center items-center">
-											<q-td
-												v-for="date in this.dates"
-												:key="date"
-											>
+									<q-td v-if="isTeacher">
+										{{ renderStudentName(props.row.student) }}
+									</q-td>
+									<q-td v-else>
+										{{ props.row.subject.name }}
+									</q-td>
+									<template v-if="isTeacher">
+										<q-td v-for="subject in subjects" :key="subject.id" class="text-center">
+											<div v-for="date in dates" :key="date" class="q-mb-xs">
 												<q-input
-													v-model.number="localMarks[props.rowIndex]"
+													v-model.number="localMarks[props.rowIndex][subject.id][dateMap[date]]"
 													type="number"
 													min="2"
 													max="5"
 													class="grade-input"
-													@blur="onGradeChange(props.rowIndex)"
-													@keyup.enter="updateStudentMark(props.rowIndex)"
+													@blur="onGradeChange(props.rowIndex, subject.id, dateMap[date])"
+													@keyup.enter="updateStudentMark(props.rowIndex, subject.id, dateMap[date])"
 													dense
 												/>
-											</q-td>
-										</div>
-									</q-td>
+											</div>
+										</q-td>
+									</template>
+									<template v-else>
+										<q-td v-for="date in dates" :key="date" class="text-center">
+											<q-input
+												v-model.number="localMarks[props.rowIndex][dateMap[date]]"
+												type="number"
+												min="2"
+												max="5"
+												class="grade-input"
+												@blur="onGradeChange(props.rowIndex, dateMap[date])"
+												@keyup.enter="updateStudentMark(props.rowIndex, dateMap[date])"
+												dense
+											/>
+										</q-td>
+									</template>
 								</q-tr>
 							</template>
 						</q-table>
@@ -95,9 +119,10 @@ export default {
 	name: "DashboardPage",
 
 	data: () => ({
-		role: "TEACHER",
+		role: "STUDENT",
 		groups: [],
 		students: [],
+		student: null,
 		studentsMarks: [],
 		localMarks: [],
 		appliedGrades: {},
@@ -109,70 +134,95 @@ export default {
 
 	computed: {
 		tableRows() {
-			const flattened = []
-			this.students.forEach(student => {
-				this.subjects
-					.filter(subject => subject.id === this.selectedSubject)
-					.forEach(subject => {
-						const existingMarks = Array.isArray(student.studentsMarks) ? student.studentsMarks : []
-						const match = existingMarks.find(sm => sm.subject?.id === subject.id)
-						flattened.push({
-							student: {
-								id: student.id,
-								firstname: student.firstname,
-								lastname: student.lastname
-							},
-							subject,
-							marks: match?.marks || []
-						})
+			const isTeacher = Array.isArray(this.students);
+			const dateSet = new Set();
+			const subjectMap = {};
+			this.subjects.forEach(sub => subjectMap[sub.id] = sub);
+			let rows = [];
+			if (isTeacher) {
+				this.students.forEach(student => {
+					const allMarks = (student.studentsMarks || []).flatMap(sm => sm.marks || []);
+					allMarks.forEach(m => dateSet.add(m.date));
+					const marksBySubjectAndDate = {};
+					allMarks.forEach(m => {
+						const subjId = m.subject.id;
+						if (!marksBySubjectAndDate[subjId]) marksBySubjectAndDate[subjId] = {};
+						marksBySubjectAndDate[subjId][m.date] = m.value;
+					});
+					rows.push({
+						student,
+						marksBySubjectAndDate,
+					});
+				});
+			} else {
+				this.student = this.student || {}
+				const allMarks = (this.student.studentsMarks || []).flatMap(sm => sm.marks || [])
+				rows = []
+				this.subjects.forEach(subject => {
+					const marksByDate = {}
+					allMarks
+						.filter(m => m.subject.id === subject.id)
+						.forEach(m => marksByDate[this.formatDate(m.date)] = m.value)
+					rows.push({
+						subject,
+						marksByDate
 					})
-			})
-			this.studentsMarks = flattened
-			const dateSet = new Set()
-			this.studentsMarks.forEach(row => row.marks.forEach(m => dateSet.add(m.date)))
-			this.dates = Array.from(dateSet).sort()
-			console.log(this.dates)
-			this.localMarks = this.studentsMarks.map(row => {
-				const dict = {}
-				row.marks.forEach(m => dict[m.date] = m.mark)
-				return dict
-			})
-			return this.studentsMarks
+				})
+			}
+			const rawDates = Array.from(dateSet).sort();
+			const formattedDates = rawDates.map(this.formatDate);
+			this.dateMap = Object.fromEntries(formattedDates.map((f, i) => [f, rawDates[i]]));
+			this.dates = formattedDates;
+			this.localMarks = rows.map(row => isTeacher ? row.marksBySubjectAndDate : row.marksByDate);
+			return rows;
 		},
 		columns() {
-			const dateCols = this.dates.map(dateStr => {
-				const [year, month, day] = dateStr.split("-")
-				return {
-					name: dateStr,
-					label: `${day}.${month}.${year}`,
-					align: "center",
-					field: dateStr,
-					sortable: false,
-					style: "width: 80px"
-				}
-			})
-			const baseCol = this.role === "TEACHER"
-				? {
-					name: "student",
-					label: "Студент",
-					align: "left",
-					field: row => `${row.student.firstname} ${row.student.lastname}`,
-					required: true,
-					style: "min-width: 200px"
-				}
-				: {
-					name: "subject",
-					label: "Предмет",
-					align: "left",
-					field: row => row.subject?.name || '',
-					required: true,
-					style: "min-width: 200px"
-				}
-			return [baseCol, ...dateCols]
+			if (this.isTeacher) {
+				return [
+					{
+						name: 'student',
+						label: 'Студент',
+						field: row => `${row.student.lastname} ${row.student.firstname}`,
+					},
+					...this.subjects.map(subject => ({
+						name: subject.name,
+						label: subject.name,
+						align: 'center',
+						// Показ первой оценки по каждому предмету в первую дату (можно усложнить)
+						field: row => this.dates.map(date =>
+							row.marksBySubjectAndDate[subject.id][this.dateMap[date]] || ''
+						)
+					}))
+				];
+			} else {
+				return [
+					{
+						name: 'subject',
+						label: 'Предмет',
+						field: row => row.subject.name,
+					},
+					...this.dates.map(date => ({
+						name: date,
+						label: date,
+						align: 'center',
+						field: row => row.marksByDate[this.dateMap[date]] || '',
+					}))
+				];
+			}
 		},
 		rowKey() {
 			return this.role === "TEACHER" ? "student.id" : "subject.id"
 		},
+		title() {
+			switch (this.role) {
+				case "ADMIN":
+					return 'Список занятий'
+				case "TEACHER":
+					return 'Оценки студентов'
+				case "STUDENT":
+					return 'Ваши оценки по предметам'
+			}
+		}
 	},
 
 	methods: {
@@ -194,23 +244,20 @@ export default {
 				})
 			}
 		},
-		onGradeChange(rowIndex) {
-			let date = this.dates[rowIndex]
+		onGradeChange(rowIndex, date) {
 			const key = `${rowIndex}_${date}`
 			this.appliedGrades[key] = true
 			setTimeout(() => delete this.appliedGrades[key], 2000)
 		},
-		updateStudentMark(rowIndex) {
-			let date = this.dates[rowIndex]
+		updateStudentMark(rowIndex, date) {
+			const [year, month, day] = date.split("-")
 			const row = this.studentsMarks[rowIndex]
-			const subjectId = row.subject?.id
-			const markValue = this.localMarks[rowIndex]?.[date] ?? 0
-			if (!subjectId) return
+			const markValue = this.localMarks[rowIndex][date] ?? 0
 			const requestBody = {
-				date: date,
+				date: `${day}.${month}.${year}`,
 				mark: markValue,
-				subjectId: row.subject.id,
-				studentId: row.student.id
+				subjectId: this.selectedSubject,
+				studentId: row.student.id,
 			}
 			axios.post("/api/v1/update-mark", requestBody)
 				.then(() => {
@@ -223,9 +270,6 @@ export default {
 					this.onGradeChange(rowIndex, date)
 				})
 		},
-		// isGradeApplied(rowIndex, date) {
-		// 	return !!this.appliedGrades[`${rowIndex}_${date}`]
-		// },
 		fetchSubjects() {
 			axios.get("/api/v1/subjects")
 				.then(res => this.subjects = res.data)
@@ -234,35 +278,16 @@ export default {
 			axios.post("/api/v1/students", {id: this.selectedGroup})
 				.then(response => {
 					this.students = response.data
-					this.fetchMarks()
 				})
 		},
-		fetchMarks() {
-			axios.get('/api/v1/students-marks', {params: {groupId: this.selectedGroup}})
-				.then(response => {
-					this.studentsMarks = response.data;
-					// const allDates = Array.from(new Set(
-					// 	this.studentsMarks.flatMap(sm => sm.marks.map(m => m.date))
-					// )).sort();
-					// this.columns = [
-					// 	{
-					// 		name: 'student',
-					// 		label: 'Студент',
-					// 		field: row => row.student.fullName || row.student.lastname
-					// 	},
-					// 	...allDates.map(date => ({
-					// 		name: date,
-					// 		label: date,
-					// 		field: row => row.marksByDate[date] || '',
-					// 		align: 'center'
-					// 	}))
-					// ]
-					// this.tableRows = this.studentsMarks.map(sm => ({
-					// 	student: sm.student,
-					// 	marksByDate: Object.fromEntries(sm.marks.map(m => [m.date, m.value]))
-					// }))
-				})
-		}
+		isTeacher() {
+			return this.role === 'TEACHER'
+		},
+		formatDate(dateStr) {
+			if (!dateStr) return ''
+			const [year, month, day] = dateStr.split('-')
+			return `${day}.${month}.${year}`
+		},
 	},
 
 	watch: {
@@ -272,15 +297,19 @@ export default {
 	},
 
 	mounted() {
-		// this.dates = Array.from(new Set(
-		// 	this.studentsMarks.flatMap(student => Object.keys(student.marks))
-		// )).sort();
 		axios.get("/api/v1/groups")
 			.then(response => {
 				this.groups = response.data
 			})
 		this.fetchSubjects()
-	}
+		if (!this.isTeacher) {
+			axios.get("/api/v1/me")
+				.then(response => {
+					console.log(response.data)
+					this.student = response.data
+				})
+		}
+	},
 }
 </script>
 
