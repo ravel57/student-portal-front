@@ -78,6 +78,26 @@
 				Добавить занятие
 			</q-card-section>
 			<q-card-section>
+				<q-select
+					:options="groups"
+					label="Группа"
+					option-label="name"
+					option-value="id"
+					emit-value map-options
+					v-model="selectedGroup"
+					dense style="min-width: 120px"
+				/>
+				<q-select
+					:options="subjects"
+					label="Предмет"
+					option-label="name"
+					option-value="id"
+					emit-value
+					map-options
+					v-model="selectedSubject"
+					dense
+					style="min-width: 120px"
+				/>
 				<q-input
 					mask="##.##.####"
 					type="date"
@@ -132,7 +152,13 @@ export default {
 				})
 		},
 		addNewLesson() {
-
+			axios.post("/api/v1/lesson", {
+				subjectId: this.selectedSubject,
+				groupId: this.selectedGroup,
+				date: this.newLessonDate
+			}).then(() => {
+				this.showModal = false
+			})
 		}
 	},
 
@@ -145,6 +171,7 @@ export default {
 	mounted() {
 		axios.get("/api/v1/groups")
 			.then(response => {
+				console.log(response.data)
 				this.groups = response.data
 			})
 		this.fetchSubjects()
