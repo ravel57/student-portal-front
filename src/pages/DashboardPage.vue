@@ -47,53 +47,59 @@
 						style="min-width: 120px"
 					/>
 				</div>
-				<div class="">
-					<q-table :rows="tableRows">
-						<template v-slot:header="props">
-							<q-tr :props="props">
-								<q-th
-									v-if="currentUserRole === 'TEACHER'"
-								>
-									Студент
-								</q-th>
-								<q-th
-									v-if="currentUserRole === 'STUDENT'"
-								>
-									Предмет
-								</q-th>
-								<q-th v-for="item in this.lessons">
-									{{ item.date }}
-								</q-th>
-							</q-tr>
-						</template>
+				<!-- Для TEACHER обычная таблица -->
+				<q-table v-if="currentUserRole !== 'STUDENT'" :rows="tableRows">
+					<template v-slot:header="props">
+						<q-tr :props="props">
+							<q-th v-if="currentUserRole === 'TEACHER'">
+								Студент
+							</q-th>
+							<q-th v-for="item in lessons" :key="item.date">
+								{{ item.date }}
+							</q-th>
+						</q-tr>
+					</template>
+					<template v-slot:body="props">
+						<q-tr :props="props">
+							<q-td v-if="currentUserRole === 'TEACHER'">
+								{{ props.row.firstname }} {{ props.row.lastname }}
+							</q-td>
+							<q-td v-for="lesson in lessons" :key="lesson.date">
+								<q-input
+									dense
+									type="number"
+									min="2"
+									max="5"
+									mask="#"
+									:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
+									@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
+								/>
+							</q-td>
+						</q-tr>
+					</template>
+				</q-table>
 
-						<template v-slot:body="props">
-							<q-tr :props="props">
-								<q-td
-									v-if="currentUserRole === 'TEACHER'"
-								>
-									{{ props.row.firstname }} {{ props.row.lastname }}
-								</q-td>
-								<q-td
-									v-if="currentUserRole === 'STUDENT'"
-								>
-									{{ props.row.name }}
-								</q-td>
-								<q-td v-for="lesson in lessons" :key="lesson.date">
-									<q-input
-										dense
-										type="number"
-										min="2"
-										max="5"
-										mask="#"
-										:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
-										@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
-									/>
-								</q-td>
-							</q-tr>
-						</template>
-					</q-table>
-				</div>
+				<!-- Для STUDENT специальная таблица: строки — предметы, колонки — даты -->
+				<q-table
+					v-else
+					:rows="studentRows"
+					:columns="studentColumns"
+					row-key="subject"
+				>
+					<template v-slot:body="props">
+						<q-tr :props="props">
+							<q-td>{{ props.row.subject }}</q-td>
+							<q-td
+								v-for="date in allDates"
+								:key="date"
+								class="text-center"
+							>
+								{{ props.row.marksByDate[date] ?? '' }}
+							</q-td>
+						</q-tr>
+					</template>
+				</q-table>
+
 				<q-dialog v-model="this.showModal">
 					<q-card>
 						<q-card-section>
@@ -162,9 +168,11 @@ export default {
 		newLessonDate: "",
 		lessons: [],
 		localMarks: {},
+		studentRows: [],
+		studentColumns: [],
+		allDates: [],
+		studentMarksBySubject: [],
 	}),
-
-	computed: {},
 
 	methods: {
 		logout() {
@@ -183,7 +191,6 @@ export default {
 			axios.post("/api/v1/students", {id: this.selectedGroup})
 				.then(response => {
 					this.tableRows = response.data
-					// this.students = response.data
 				})
 		},
 		addNewLesson() {
@@ -208,18 +215,14 @@ export default {
 		fillMarks() {
 			this.localMarks = {};
 			for (const student of this.tableRows) {
-				// Для каждого студента выделяем объект под даты
 				this.localMarks[student.id] = {};
-				// Массив studentsMarks может быть пустым
 				if (student.studentsMarks && student.studentsMarks.length > 0) {
 					for (const sm of student.studentsMarks) {
 						for (const mark of sm.marks) {
-							// Если дата из оценок совпадает с одной из lessons
 							this.localMarks[student.id][mark.date] = mark.value;
 						}
 					}
 				}
-				// Можно также заполнить пустые поля, если нужно, чтобы были "" в каждой ячейке
 				for (const lesson of this.lessons) {
 					if (!(lesson.date in this.localMarks[student.id])) {
 						this.localMarks[student.id][lesson.date] = '';
@@ -227,7 +230,6 @@ export default {
 				}
 			}
 		},
-
 		onMarkInput(studentId, date, value) {
 			if (!this.localMarks[studentId]) this.localMarks[studentId] = {};
 			this.localMarks[studentId][date] = value;
@@ -237,6 +239,42 @@ export default {
 				subjectId: this.selectedSubject,
 				studentId: studentId,
 			})
+		},
+
+		/** Формирует таблицу для STUDENT: строки — предметы, колонки — даты */
+		fillStudentTable() {
+			if (!this.studentMarksBySubject) return;
+			// Собрать все уникальные даты по всем предметам
+			const dateSet = new Set();
+			this.studentMarksBySubject.forEach(item => {
+				item.marks.forEach(mark => {
+					dateSet.add(mark.date);
+				});
+			});
+			this.allDates = Array.from(dateSet).sort();
+
+			// Строим строки таблицы
+			this.studentRows = this.studentMarksBySubject.map(subjectItem => {
+				const marksByDate = {};
+				subjectItem.marks.forEach(mark => {
+					marksByDate[mark.date] = mark.value;
+				});
+				return {
+					subject: subjectItem.subject.name,
+					marksByDate,
+				};
+			});
+
+			// Строим колонки: "Предмет", далее по датам
+			this.studentColumns = [
+				{ name: 'subject', label: 'Предмет', align: 'left', field: 'subject' },
+				...this.allDates.map(date => ({
+					name: date,
+					label: date,
+					align: 'center',
+					field: row => row.marksByDate[date] ?? '',
+				}))
+			];
 		},
 	},
 
@@ -260,21 +298,30 @@ export default {
 				this.fillMarks();
 			},
 			immediate: true
+		},
+		studentMarksBySubject: {
+			handler() {
+				this.fillStudentTable();
+			},
+			immediate: true
 		}
 	},
 
 	mounted() {
 		axios.get("/api/v1/groups")
 			.then(response => {
-				console.log(response.data)
 				this.groups = response.data
 			})
 		this.fetchSubjects()
 		axios.get("/api/v1/me")
 			.then(response => {
-				console.log(response.data)
 				this.user = response.data
 				this.currentUserRole = this.user.role
+				if (this.currentUserRole === 'STUDENT') {
+					axios.get(`/api/v1/students-marks-by-subjects?studentId=${this.user.id}`).then(response => {
+						this.studentMarksBySubject = response.data.marksBySubject;
+					})
+				}
 			})
 	},
 }
