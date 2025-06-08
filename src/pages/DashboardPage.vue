@@ -231,8 +231,12 @@ export default {
 		onMarkInput(studentId, date, value) {
 			if (!this.localMarks[studentId]) this.localMarks[studentId] = {};
 			this.localMarks[studentId][date] = value;
-			// Тут можно добавить авто-сохранение или валидацию
-			console.log(this.localMarks)
+			axios.post('/api/v1/update-mark', {
+				date: date,
+				mark: value,
+				subjectId: this.selectedSubject,
+				studentId: studentId,
+			})
 		},
 	},
 
