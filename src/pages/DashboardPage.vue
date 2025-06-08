@@ -1,6 +1,12 @@
 <template>
 	<div class="">
 		<div class="table-param">
+			<q-btn
+				v-if="currentUserRole === 'ADMIN'"
+				outline
+				@click="showModal = true"
+				label="Добавить занятие"
+			/>
 			<div
 				v-if="currentUserRole === 'TEACHER'"
 				class="table-param-text"
@@ -54,7 +60,7 @@
 						<q-td
 							v-if="currentUserRole === 'TEACHER'"
 						>
-							{{ props.row.id }}
+							{{ props.row.firstname }} {{ props.row.lastname }}
 						</q-td>
 						<q-td
 							v-if="currentUserRole === 'STUDENT'"
@@ -66,6 +72,30 @@
 			</q-table>
 		</div>
 	</div>
+	<q-dialog v-model="this.showModal">
+		<q-card>
+			<q-card-section>
+				Добавить занятие
+			</q-card-section>
+			<q-card-section>
+				<q-input
+					mask="##.##.####"
+					type="date"
+					v-model="this.newLessonDate"
+				/>
+			</q-card-section>
+			<q-card-actions>
+				<q-btn
+					v-close-popup
+					label="Отмена"
+				/>
+				<q-btn
+					@click="this.addNewLesson"
+					label="Добавить"
+				/>
+			</q-card-actions>
+		</q-card>
+	</q-dialog>
 </template>
 
 <script>
@@ -82,7 +112,9 @@ export default {
 		subjects: [],
 		selectedSubject: "",
 		students: [],
-		student: {}
+		user: {},
+		showModal: false,
+		newLessonDate: ""
 	}),
 
 	computed: {},
@@ -95,9 +127,13 @@ export default {
 		fetchStudents() {
 			axios.post("/api/v1/students", {id: this.selectedGroup})
 				.then(response => {
-					this.students = response.data
+					this.tableRows = response.data
+					// this.students = response.data
 				})
 		},
+		addNewLesson() {
+
+		}
 	},
 
 	watch: {
@@ -112,13 +148,12 @@ export default {
 				this.groups = response.data
 			})
 		this.fetchSubjects()
-		if (this.currentUserRole !== "TEACHER") {
-			axios.get("/api/v1/me")
-				.then(response => {
-					console.log(response.data)
-					this.student = response.data
-				})
-		}
+		axios.get("/api/v1/me")
+			.then(response => {
+				console.log(response.data)
+				this.user = response.data
+				this.currentUserRole = this.user.role
+			})
 	},
 }
 </script>
