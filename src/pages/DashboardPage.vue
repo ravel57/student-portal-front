@@ -52,6 +52,9 @@
 						>
 							Предмет
 						</q-th>
+						<q-th v-for="item in this.lessons">
+							{{ item.date }}
+						</q-th>
 					</q-tr>
 				</template>
 
@@ -65,6 +68,9 @@
 						<q-td
 							v-if="currentUserRole === 'STUDENT'"
 						>
+							{{ props.row.name }}
+						</q-td>
+						<q-td>
 							{{ props.row.name }}
 						</q-td>
 					</q-tr>
@@ -134,7 +140,8 @@ export default {
 		students: [],
 		user: {},
 		showModal: false,
-		newLessonDate: ""
+		newLessonDate: "",
+		lessons: []
 	}),
 
 	computed: {},
@@ -159,12 +166,27 @@ export default {
 			}).then(() => {
 				this.showModal = false
 			})
+		},
+		getLessonsBy() {
+			if (this.selectedSubject !== "" && this.selectedGroup !== "") {
+				axios.post("/api/v1/lessons-by", {
+					subjectId: this.selectedSubject,
+					groupId: this.selectedGroup,
+				}).then(response => {
+					this.lessons = response.data
+				})
+			}
 		}
 	},
 
 	watch: {
 		selectedGroup() {
 			this.fetchStudents()
+			if (this.currentUserRole !== 'TEACHER') return
+			this.getLessonsBy()
+		},
+		selectedSubject() {
+			this.getLessonsBy()
 		}
 	},
 
