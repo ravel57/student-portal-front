@@ -85,16 +85,19 @@
 					:rows="studentRows"
 					:columns="studentColumns"
 					row-key="subject"
+					flat
+					bordered
+					hide-bottom
 				>
 					<template v-slot:body="props">
 						<q-tr :props="props">
 							<q-td>{{ props.row.subject }}</q-td>
 							<q-td
-								v-for="date in allDates"
-								:key="date"
+								v-for="col in studentColumns.slice(1)"
+								:key="col.name"
 								class="text-center"
 							>
-								{{ props.row.marksByDate[date] ?? '' }}
+								{{ props.row[col.name] }}
 							</q-td>
 						</q-tr>
 					</template>
@@ -240,41 +243,46 @@ export default {
 				studentId: studentId,
 			})
 		},
-
-		/** Формирует таблицу для STUDENT: строки — предметы, колонки — даты */
 		fillStudentTable() {
-			if (!this.studentMarksBySubject) return;
-			// Собрать все уникальные даты по всем предметам
+			if (!this.studentMarksBySubject || this.studentMarksBySubject.length === 0) {
+				this.studentRows = [];
+				this.studentColumns = [];
+				this.allDates = [];
+				return;
+			}
 			const dateSet = new Set();
 			this.studentMarksBySubject.forEach(item => {
-				item.marks.forEach(mark => {
-					dateSet.add(mark.date);
+				(item.marks || []).forEach(mark => {
+					if (mark && mark.date) {
+						dateSet.add(mark.date);
+					}
 				});
 			});
 			this.allDates = Array.from(dateSet).sort();
 
-			// Строим строки таблицы
-			this.studentRows = this.studentMarksBySubject.map(subjectItem => {
-				const marksByDate = {};
-				subjectItem.marks.forEach(mark => {
-					marksByDate[mark.date] = mark.value;
-				});
-				return {
-					subject: subjectItem.subject.name,
-					marksByDate,
-				};
-			});
-
-			// Строим колонки: "Предмет", далее по датам
 			this.studentColumns = [
 				{ name: 'subject', label: 'Предмет', align: 'left', field: 'subject' },
 				...this.allDates.map(date => ({
 					name: date,
 					label: date,
 					align: 'center',
-					field: row => row.marksByDate[date] ?? '',
+					field: date
 				}))
 			];
+
+			this.studentRows = this.studentMarksBySubject.map(subjectItem => {
+				const marksByDate = {};
+				(this.allDates || []).forEach(date => {
+					marksByDate[date] = '';
+				});
+				(subjectItem.marks || []).forEach(mark => {
+					marksByDate[mark.date] = mark.mark !== null && mark.mark !== undefined ? mark.mark : '';
+				});
+				return {
+					subject: subjectItem.subject.name,
+					...marksByDate
+				};
+			});
 		},
 	},
 
@@ -319,7 +327,8 @@ export default {
 				this.currentUserRole = this.user.role
 				if (this.currentUserRole === 'STUDENT') {
 					axios.get(`/api/v1/students-marks-by-subjects?studentId=${this.user.id}`).then(response => {
-						this.studentMarksBySubject = response.data.marksBySubject;
+						this.studentMarksBySubject = response.data;
+						this.fillStudentTable();
 					})
 				}
 			})
