@@ -13,8 +13,14 @@
 					<q-btn
 						v-if="currentUserRole === 'ADMIN'"
 						outline
-						@click="showModal = true"
+						@click="showNewLessonModal = true"
 						label="Добавить занятие"
+					/>
+					<q-btn
+						v-if="currentUserRole === 'ADMIN'"
+						outline
+						@click="showNewUserModal = true"
+						label="Добавить пользователя"
 					/>
 					<div
 						v-if="currentUserRole === 'TEACHER'"
@@ -103,7 +109,7 @@
 					</template>
 				</q-table>
 
-				<q-dialog v-model="this.showModal">
+				<q-dialog v-model="this.showNewLessonModal">
 					<q-card>
 						<q-card-section>
 							Добавить занятие
@@ -147,6 +153,63 @@
 						</q-card-actions>
 					</q-card>
 				</q-dialog>
+
+				<q-dialog v-model="this.showNewUserModal">
+					<q-card>
+						<q-card-section>
+							Добавить пользователя
+						</q-card-section>
+						<q-card-section>
+							<q-select
+								:options="usersTypes"
+								label="Тип пользователя"
+								option-label="name"
+								option-value="id"
+								emit-value
+								map-options
+								v-model="newUserRole"
+								dense style="min-width: 120px"
+							/>
+							<q-input
+								label="Имя"
+								v-model="this.newUserFirstname"
+							/>
+							<q-input
+								label="Фамилия"
+								v-model="this.newUserLastname"
+							/>
+							<q-input
+								label="email"
+								v-model="this.newUserEmail"
+							/>
+							<q-input
+								label="Пароль"
+								type="password"
+								v-model="this.newUserPassword"
+							/>
+							<q-select
+								:options="groups"
+								label="Группа"
+								option-label="name"
+								option-value="id"
+								emit-value
+								map-options
+								v-model="newUserGroupId"
+								dense style="min-width: 120px"
+							/>
+						</q-card-section>
+						<q-card-actions>
+							<q-btn
+								v-close-popup
+								label="Отмена"
+							/>
+							<q-btn
+								@click="this.addNewUser"
+								label="Добавить"
+							/>
+						</q-card-actions>
+					</q-card>
+				</q-dialog>
 			</q-page>
 		</q-page-container>
 	</q-layout>
@@ -167,7 +230,8 @@ export default {
 		selectedSubject: "",
 		students: [],
 		user: {},
-		showModal: false,
+		showNewLessonModal: false,
+		showNewUserModal: false,
 		newLessonDate: "",
 		lessons: [],
 		localMarks: {},
@@ -175,6 +239,13 @@ export default {
 		studentColumns: [],
 		allDates: [],
 		studentMarksBySubject: [],
+		usersTypes: ['STUDENT', 'TEACHER', 'ADMIN'],
+		newUserRole: '',
+		newUserFirstname: '',
+		newUserLastname: '',
+		newUserEmail: '',
+		newUserPassword: '',
+		newUserGroupId: '',
 	}),
 
 	methods: {
@@ -202,7 +273,7 @@ export default {
 				groupId: this.selectedGroup,
 				date: this.newLessonDate
 			}).then(() => {
-				this.showModal = false
+				this.showNewLessonModal = false
 			})
 		},
 		getLessonsBy() {
@@ -261,7 +332,7 @@ export default {
 			this.allDates = Array.from(dateSet).sort();
 
 			this.studentColumns = [
-				{ name: 'subject', label: 'Предмет', align: 'left', field: 'subject' },
+				{name: 'subject', label: 'Предмет', align: 'left', field: 'subject'},
 				...this.allDates.map(date => ({
 					name: date,
 					label: date,
@@ -284,6 +355,18 @@ export default {
 				};
 			});
 		},
+		addNewUser() {
+			axios.post("/api/v1/user", {
+				firstname: this.newUserFirstname,
+				lastname: this.newUserLastname,
+				email: this.newUserEmail,
+				password: this.newUserPassword,
+				role: this.newUserRole,
+				groupId: this.newUserGroupId,
+			}).then(() => {
+				this.showNewUserModal = false
+			})
+		}
 	},
 
 	watch: {
