@@ -11,50 +11,50 @@
 			<q-page padding>
 				<div class="table-param">
 					<q-btn
-						v-if="currentUserRole === 'ADMIN'"
-						outline
-						@click="showNewLessonModal = true"
-						label="Добавить занятие"
+							v-if="currentUserRole === 'ADMIN'"
+							outline
+							@click="showNewLessonModal = true"
+							label="Добавить занятие"
 					/>
 					<q-btn
-						v-if="currentUserRole === 'ADMIN'"
-						outline
-						@click="showNewUserModal = true"
-						label="Добавить пользователя"
+							v-if="currentUserRole === 'ADMIN'"
+							outline
+							@click="showNewUserModal = true"
+							label="Добавить пользователя"
 					/>
 					<div
-						v-if="currentUserRole === 'TEACHER'"
-						class="table-param-text"
-						v-text="'Группа'"
+							v-if="currentUserRole === 'TEACHER'"
+							class="table-param-text"
+							v-text="'Группа'"
 					/>
 					<q-select
-						v-if="currentUserRole === 'TEACHER'"
-						:options="groups"
-						option-label="name"
-						option-value="id"
-						emit-value map-options
-						v-model="selectedGroup"
-						dense style="min-width: 120px"
+							v-if="currentUserRole === 'TEACHER'"
+							:options="groups"
+							option-label="name"
+							option-value="id"
+							emit-value map-options
+							v-model="selectedGroup"
+							dense style="min-width: 120px"
 					/>
 					<div
-						v-if="currentUserRole === 'TEACHER'"
-						class="table-param-text"
-						v-text="'Предмет'"
+							v-if="currentUserRole === 'TEACHER'"
+							class="table-param-text"
+							v-text="'Предмет'"
 					/>
 					<q-select
-						v-if="currentUserRole === 'TEACHER'"
-						:options="subjects"
-						option-label="name"
-						option-value="id"
-						emit-value
-						map-options
-						v-model="selectedSubject"
-						dense
-						style="min-width: 120px"
+							v-if="currentUserRole === 'TEACHER'"
+							:options="subjects"
+							option-label="name"
+							option-value="id"
+							emit-value
+							map-options
+							v-model="selectedSubject"
+							dense
+							style="min-width: 120px"
 					/>
 				</div>
 				<div
-					v-if="currentUserRole!== 'ADMIN'"
+						v-if="currentUserRole!== 'ADMIN'"
 				>
 					<!-- Для TEACHER обычная таблица -->
 					<q-table v-if="currentUserRole !== 'STUDENT'" :rows="tableRows">
@@ -77,17 +77,17 @@
 									{{ props.row.firstname }} {{ props.row.lastname }}
 								</q-td>
 								<q-td
-									v-for="lesson in lessons"
-									:key="lesson.date"
+										v-for="lesson in lessons"
+										:key="lesson.date"
 								>
 									<q-input
-										dense
-										type="number"
-										min="2"
-										max="5"
-										mask="#"
-										:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
-										@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
+											dense
+											type="number"
+											min="2"
+											max="5"
+											mask="#"
+											:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
+											@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
 									/>
 								</q-td>
 								<q-td v-if="currentUserRole === 'TEACHER'">
@@ -99,21 +99,21 @@
 
 					<!-- Для STUDENT специальная таблица: строки — предметы, колонки — даты -->
 					<q-table
-						v-else
-						:rows="studentRows"
-						:columns="studentColumns"
-						row-key="subject"
-						flat
-						bordered
-						hide-bottom
+							v-else
+							:rows="studentRows"
+							:columns="studentColumns"
+							row-key="subject"
+							flat
+							bordered
+							hide-bottom
 					>
 						<template v-slot:body="props">
 							<q-tr :props="props">
 								<q-td>{{ props.row.subject }}</q-td>
 								<q-td
-									v-for="col in studentColumns.slice(1)"
-									:key="col.name"
-									class="text-center"
+										v-for="col in studentColumns.slice(1)"
+										:key="col.name"
+										class="text-center"
 								>
 									{{ props.row[col.name] }}
 								</q-td>
@@ -129,39 +129,39 @@
 						</q-card-section>
 						<q-card-section>
 							<q-select
-								:options="groups"
-								label="Группа"
-								option-label="name"
-								option-value="id"
-								emit-value map-options
-								v-model="selectedGroup"
-								dense style="min-width: 120px"
+									:options="groups"
+									label="Группа"
+									option-label="name"
+									option-value="id"
+									emit-value map-options
+									v-model="selectedGroup"
+									dense style="min-width: 120px"
 							/>
 							<q-select
-								:options="subjects"
-								label="Предмет"
-								option-label="name"
-								option-value="id"
-								emit-value
-								map-options
-								v-model="selectedSubject"
-								dense
-								style="min-width: 120px"
+									:options="subjects"
+									label="Предмет"
+									option-label="name"
+									option-value="id"
+									emit-value
+									map-options
+									v-model="selectedSubject"
+									dense
+									style="min-width: 120px"
 							/>
 							<q-input
-								mask="##.##.####"
-								type="date"
-								v-model="this.newLessonDate"
+									mask="##.##.####"
+									type="date"
+									v-model="this.newLessonDate"
 							/>
 						</q-card-section>
 						<q-card-actions>
 							<q-btn
-								v-close-popup
-								label="Отмена"
+									v-close-popup
+									label="Отмена"
 							/>
 							<q-btn
-								@click="this.addNewLesson"
-								label="Добавить"
+									@click="this.addNewLesson"
+									label="Добавить"
 							/>
 						</q-card-actions>
 					</q-card>
@@ -174,51 +174,51 @@
 						</q-card-section>
 						<q-card-section>
 							<q-select
-								:options="usersTypes"
-								label="Тип пользователя"
-								option-label="name"
-								option-value="id"
-								emit-value
-								map-options
-								v-model="newUserRole"
-								dense style="min-width: 120px"
+									:options="usersTypes"
+									label="Тип пользователя"
+									option-label="name"
+									option-value="id"
+									emit-value
+									map-options
+									v-model="newUserRole"
+									dense style="min-width: 120px"
 							/>
 							<q-input
-								label="Имя"
-								v-model="this.newUserFirstname"
+									label="Имя"
+									v-model="this.newUserFirstname"
 							/>
 							<q-input
-								label="Фамилия"
-								v-model="this.newUserLastname"
+									label="Фамилия"
+									v-model="this.newUserLastname"
 							/>
 							<q-input
-								label="email"
-								v-model="this.newUserEmail"
+									label="email"
+									v-model="this.newUserEmail"
 							/>
 							<q-input
-								label="Пароль"
-								type="password"
-								v-model="this.newUserPassword"
+									label="Пароль"
+									type="password"
+									v-model="this.newUserPassword"
 							/>
 							<q-select
-								:options="groups"
-								label="Группа"
-								option-label="name"
-								option-value="id"
-								emit-value
-								map-options
-								v-model="newUserGroupId"
-								dense style="min-width: 120px"
+									:options="groups"
+									label="Группа"
+									option-label="name"
+									option-value="id"
+									emit-value
+									map-options
+									v-model="newUserGroupId"
+									dense style="min-width: 120px"
 							/>
 						</q-card-section>
 						<q-card-actions>
 							<q-btn
-								v-close-popup
-								label="Отмена"
+									v-close-popup
+									label="Отмена"
 							/>
 							<q-btn
-								@click="this.addNewUser"
-								label="Добавить"
+									@click="this.addNewUser"
+									label="Добавить"
 							/>
 						</q-card-actions>
 					</q-card>
@@ -264,21 +264,21 @@ export default {
 	methods: {
 		logout() {
 			axios.post('/logout')
-				.then(() => location.reload())
-				.catch(() => {
-					axios.post('/logout')
-						.then(() => location.reload())
-				})
+					.then(() => location.reload())
+					.catch(() => {
+						axios.post('/logout')
+								.then(() => location.reload())
+					})
 		},
 		fetchSubjects() {
 			axios.get("/api/v1/subjects")
-				.then(res => this.subjects = res.data)
+					.then(res => this.subjects = res.data)
 		},
 		fetchStudents() {
 			axios.post("/api/v1/students", {id: this.selectedGroup})
-				.then(response => {
-					this.tableRows = response.data
-				})
+					.then(response => {
+						this.tableRows = response.data
+					})
 		},
 		addNewLesson() {
 			axios.post("/api/v1/lesson", {
@@ -351,7 +351,8 @@ export default {
 					label: date,
 					align: 'center',
 					field: date
-				}))
+				})),
+				{name: 'average', label: 'Средний балл', align: 'center', field: 'average'}
 			];
 
 			this.studentRows = this.studentMarksBySubject.map(subjectItem => {
@@ -362,9 +363,19 @@ export default {
 				(subjectItem.marks || []).forEach(mark => {
 					marksByDate[mark.date] = mark.mark !== null && mark.mark !== undefined ? mark.mark : '';
 				});
+				// Считаем средний балл по предмету
+				const values = (subjectItem.marks || [])
+						.map(m => typeof m.mark === 'number' && !isNaN(m.mark) ? m.mark : null)
+						.filter(v => v !== null);
+				let average = '-';
+				if (values.length) {
+					const avg = values.reduce((acc, v) => acc + v, 0) / values.length;
+					average = avg % 1 === 0 ? avg : avg.toFixed(2).replace('.', ',');
+				}
 				return {
 					subject: subjectItem.subject.name,
-					...marksByDate
+					...marksByDate,
+					average
 				};
 			});
 		},
@@ -381,14 +392,25 @@ export default {
 			})
 		},
 		getAverageMark(row) {
-			console.log(row)
-			if (!row.marks || row.marks.length === 0) return '-'
-			const values = row.marks
-				.map(m => m.mark)
-				.filter(m => typeof m === 'number' && !isNaN(m))
-			if (values.length === 0) return '-'
+			if (!row.studentsMarks || row.studentsMarks.length === 0 || this.lessons.length === 0) {
+				return '-'
+			}
+			const lessonDates = this.lessons.map(l => l.date)
+			const values = row.studentsMarks
+					.flatMap(sm => sm.marks)                          // из каждого объекта studentsMarks берём массив marks
+					.filter(m =>
+							lessonDates.includes(m.date) &&              // оставляем только те, что по текущему предмету
+							typeof m.value === 'number' && !isNaN(m.value)
+					)
+					.map(m => m.value)
+			if (values.length === 0) {
+				return '-'
+			}
 			const sum = values.reduce((acc, v) => acc + v, 0)
-			return (sum / values.length).toFixed(2)
+			const avg = sum / values.length
+			return avg % 1 === 0
+					? avg
+					: avg.toFixed(2).replace('.', ',')
 		},
 	},
 
@@ -423,21 +445,21 @@ export default {
 
 	mounted() {
 		axios.get("/api/v1/groups")
-			.then(response => {
-				this.groups = response.data
-			})
+				.then(response => {
+					this.groups = response.data
+				})
 		this.fetchSubjects()
 		axios.get("/api/v1/me")
-			.then(response => {
-				this.user = response.data
-				this.currentUserRole = this.user.role
-				if (this.currentUserRole === 'STUDENT') {
-					axios.get(`/api/v1/students-marks-by-subjects?studentId=${this.user.id}`).then(response => {
-						this.studentMarksBySubject = response.data;
-						this.fillStudentTable();
-					})
-				}
-			})
+				.then(response => {
+					this.user = response.data
+					this.currentUserRole = this.user.role
+					if (this.currentUserRole === 'STUDENT') {
+						axios.get(`/api/v1/students-marks-by-subjects?studentId=${this.user.id}`).then(response => {
+							this.studentMarksBySubject = response.data;
+							this.fillStudentTable();
+						})
+					}
+				})
 	},
 }
 </script>
