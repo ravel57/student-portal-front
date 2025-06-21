@@ -53,61 +53,74 @@
 						style="min-width: 120px"
 					/>
 				</div>
-				<!-- Для TEACHER обычная таблица -->
-				<q-table v-if="currentUserRole !== 'STUDENT'" :rows="tableRows">
-					<template v-slot:header="props">
-						<q-tr :props="props">
-							<q-th v-if="currentUserRole === 'TEACHER'">
-								Студент
-							</q-th>
-							<q-th v-for="item in lessons" :key="item.date">
-								{{ item.date }}
-							</q-th>
-						</q-tr>
-					</template>
-					<template v-slot:body="props">
-						<q-tr :props="props">
-							<q-td v-if="currentUserRole === 'TEACHER'">
-								{{ props.row.firstname }} {{ props.row.lastname }}
-							</q-td>
-							<q-td v-for="lesson in lessons" :key="lesson.date">
-								<q-input
-									dense
-									type="number"
-									min="2"
-									max="5"
-									mask="#"
-									:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
-									@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
-								/>
-							</q-td>
-						</q-tr>
-					</template>
-				</q-table>
-
-				<!-- Для STUDENT специальная таблица: строки — предметы, колонки — даты -->
-				<q-table
-					v-else
-					:rows="studentRows"
-					:columns="studentColumns"
-					row-key="subject"
-					flat
-					bordered
-					hide-bottom
+				<div
+					v-if="currentUserRole!== 'ADMIN'"
 				>
-					<template v-slot:body="props">
-						<q-tr :props="props">
-							<q-td>{{ props.row.subject }}</q-td>
-							<q-td
-								v-for="col in studentColumns.slice(1)"
-								:key="col.name"
-								class="text-center"
-							>
-								{{ props.row[col.name] }}
-							</q-td>
-						</q-tr>
-					</template>
-				</q-table>
+					<!-- Для TEACHER обычная таблица -->
+					<q-table v-if="currentUserRole !== 'STUDENT'" :rows="tableRows">
+						<template v-slot:header="props">
+							<q-tr :props="props">
+								<q-th v-if="currentUserRole === 'TEACHER'">
+									Студент
+								</q-th>
+								<q-th v-for="item in lessons" :key="item.date">
+									{{ item.date }}
+								</q-th>
+								<q-th>
+									Средняя оценка
+								</q-th>
+							</q-tr>
+						</template>
+						<template v-slot:body="props">
+							<q-tr :props="props">
+								<q-td v-if="currentUserRole === 'TEACHER'">
+									{{ props.row.firstname }} {{ props.row.lastname }}
+								</q-td>
+								<q-td
+									v-for="lesson in lessons"
+									:key="lesson.date"
+								>
+									<q-input
+										dense
+										type="number"
+										min="2"
+										max="5"
+										mask="#"
+										:model-value="localMarks[props.row.id]?.[lesson.date] ?? ''"
+										@update:model-value="val => onMarkInput(props.row.id, lesson.date, val)"
+									/>
+								</q-td>
+								<q-td v-if="currentUserRole === 'TEACHER'">
+									{{ getAverageMark(props.row) }}
+								</q-td>
+							</q-tr>
+						</template>
+					</q-table>
+
+					<!-- Для STUDENT специальная таблица: строки — предметы, колонки — даты -->
+					<q-table
+						v-else
+						:rows="studentRows"
+						:columns="studentColumns"
+						row-key="subject"
+						flat
+						bordered
+						hide-bottom
+					>
+						<template v-slot:body="props">
+							<q-tr :props="props">
+								<q-td>{{ props.row.subject }}</q-td>
+								<q-td
+									v-for="col in studentColumns.slice(1)"
+									:key="col.name"
+									class="text-center"
+								>
+									{{ props.row[col.name] }}
+								</q-td>
+							</q-tr>
+						</template>
+					</q-table>
+				</div>
 
 				<q-dialog v-model="this.showNewLessonModal">
 					<q-card>
@@ -366,7 +379,17 @@ export default {
 			}).then(() => {
 				this.showNewUserModal = false
 			})
-		}
+		},
+		getAverageMark(row) {
+			console.log(row)
+			if (!row.marks || row.marks.length === 0) return '-'
+			const values = row.marks
+				.map(m => m.mark)
+				.filter(m => typeof m === 'number' && !isNaN(m))
+			if (values.length === 0) return '-'
+			const sum = values.reduce((acc, v) => acc + v, 0)
+			return (sum / values.length).toFixed(2)
+		},
 	},
 
 	watch: {
